@@ -92,6 +92,35 @@ def get_img_posi(t, path_seg_list):
         count=count+1
     return None,-1
 
+def verify_kml(tmp_local):
+    try:
+        f = open(tmp_local+"/chamo.kml","r")
+        kml_obj = etree.parse(f)
+        root=kml_obj.getroot()
+        ns="{http://www.opengis.net/kml/2.2}"
+        place_markers=root[0].findall(ns+"Placemark")
+        last_s_time=0
+        for mk in place_markers:
+            name=mk.find(ns+"name").text
+            if " " in name:
+                vec=name.split(" ")
+                name=vec[0]
+            if ":" in name:
+                two_v = name.split("-")
+                if len(two_v)==1:
+                    s_time=get_sec(two_v[0])
+                    e_time=get_sec(two_v[0])
+                else:
+                    s_time=get_sec(two_v[0])
+                    e_time=get_sec(two_v[1])
+                if last_s_time>s_time:
+                    return [False,"时间非递增，t1="+str(last_s_time)+" t2="+str(s_time)]
+                last_s_time=s_time
+    except:
+        var = traceback.format_exc()
+        return [False,"出错： "+var]
+    return [True,"ok"]
+
 def get_img_2_posi_list(img_count, tmp_local):
     node_2_path=[]
     path_posi=[]
@@ -136,6 +165,7 @@ def get_img_2_posi_list(img_count, tmp_local):
                 e_time=get_sec(two_v[1])
             if last_s_time>s_time:
                 return [False,"last_s_time>=s_time "+str(last_s_time)+" "+str(s_time)]
+            last_s_time=s_time
             node_2_path.append([len(path_posi)-1, s_time, e_time])    
     
     seg_time_list=[]
@@ -179,9 +209,9 @@ def get_img_2_posi_list(img_count, tmp_local):
                 imgid_2_posi[len(imgid_2_posi)-1]["meta"]="end"
     return [True,imgid_2_posi]
 
-def get_frame_2_posi_seg(img_count):
+def get_frame_2_posi_seg(img_count, tmp_local):
     v_seg_frame_count=int(video_seg_length*60*target_fps)
-    [re,imgid_2_posi]=get_img_2_posi_list(img_count)
+    [re,imgid_2_posi]=get_img_2_posi_list(img_count, tmp_local)
     if re==False:
         return [False,imgid_2_posi]
     tmp_count=0
@@ -221,6 +251,13 @@ def download_kml_oss(project_name, bucket, tmp_local):
         # print(traceback.format_exc())
         return [False,"download kml failed"]
     return [True,""]
+
+def write_json_to_oss(data, oss_addr,pre, bucket):
+    temp_file=pre+"temp_file.json"
+    f = open(temp_file, "w")
+    json.dump(data, f)
+    f.close()
+    bucket.put_object_from_file(oss_addr, temp_file)
 
 def download_raw_video_oss(project_name, bucket, tmp_local):
     try:
@@ -306,22 +343,22 @@ def cal_whole_tiles(min_x, max_x, min_y, max_y):
     target_zoom = -1
     target_tiles_x = []
     target_tiles_y=[]
-    for tmp_zoom in range(9,18):
+    for tmp_zoom in range(15,9,-1):
         z_diff=path_img_zoom-tmp_zoom
         wc_lt=[min_x>> z_diff, min_y>> z_diff]
         wc_rb=[max_x>> z_diff, max_y>> z_diff]
         wc_c=[(wc_rb[0]+wc_lt[0])/2, (wc_rb[1]+wc_lt[1])/2]
         wc_tile=[int(wc_c[0]//tile_size), int(wc_c[1]//tile_size)]
-        if wc_rb[0]-wc_lt[0] > wc_rb[1]-wc_lt[1]:
+        
+        if wc_rb[0]-wc_lt[0] > (wc_rb[1]-wc_lt[1])*1.51:
             base_len=wc_rb[0]-wc_lt[0]
+            max_p=264
         else:
             base_len=wc_rb[1]-wc_lt[1]
-        if base_len>256:
+            max_p=175
+        if base_len<max_p-10:
             target_tiles_x=[wc_tile[0]-1,wc_tile[0],wc_tile[0]+1]
             target_tiles_y=[wc_tile[1]-1,wc_tile[1],wc_tile[1]+1]
             target_zoom=tmp_zoom
             break
     return target_zoom, target_tiles_x, target_tiles_y
-
-
-                        

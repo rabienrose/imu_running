@@ -331,7 +331,7 @@ if __name__ == '__main__':
                 img_count=re[0]["frame_count"]
                 [re,imgid_2_posi_seg] = get_frame_2_posi_seg(img_count, tmp_local)
                 if re==False:
-                    set_task_status(task_name, "proc",-5,imgid_2_posi_seg,mydb)
+                    set_task_status(task_name, "proc",-5,info,mydb)
                     continue
                 
                 b_succ=True

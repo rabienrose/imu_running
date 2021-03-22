@@ -13,6 +13,10 @@ from chamo_common.util import get_bounding_box
 from chamo_common.util import download_patches_oss
 from chamo_common.util import upload_patch_to_oss
 from chamo_common.util import cal_whole_tiles
+from chamo_common.util import write_json_to_oss
+import datetime
+from datetime import date
+import traceback
 import chamo_common.config
 import math
 import shutil
@@ -24,6 +28,7 @@ tile_size=chamo_common.config.tile_size
 patch_path=chamo_common.config.patch_path
 tmp_local=tmp_local=tmp_local="tmp_file_patch"
 task_table_name=chamo_common.config.task_table_name
+oss_root=chamo_common.config.oss_root
 
 def download_whole_map(min_x, max_x, min_y, max_y, project_folder, path_info):
     patch_folder=tmp_local+"/"+patch_path
@@ -84,41 +89,50 @@ if __name__ == '__main__':
     while True:
         tasks=get_task_list("count", mydb)
         for task_name in tasks:
-            set_task_status(task_name, "patch",1,"",mydb)
-            if os.path.exists(tmp_local):
-                shutil.rmtree(tmp_local)
-            os.mkdir(tmp_local)
-            print(task_name+" start")
-            [re,info]=download_kml_oss(task_name, bucket, tmp_local)
-            if re==False:
-                set_task_status(task_name, "patch",-2,info,mydb)
-                continue
-            for x in mydb[task_table_name].find({"name":task_name},{"_id":0,"frame_count":1}):
-                if not "frame_count" in x:
-                    set_task_status(task_name, "patch",-3,"no frame count",mydb)
+            try:
+                set_task_status(task_name, "patch",1,"",mydb)
+                if os.path.exists(tmp_local):
+                    shutil.rmtree(tmp_local)
+                os.mkdir(tmp_local)
+                print(task_name+" start")
+                [re,info]=download_kml_oss(task_name, bucket, tmp_local)
+                if re==False:
+                    set_task_status(task_name, "patch",-2,info,mydb)
                     continue
-                img_count=x["frame_count"]
-                [re,imgid_2_posi_seg] = get_frame_2_posi_seg(img_count)
+                for x in mydb[task_table_name].find({"name":task_name},{"_id":0,"frame_count":1}):
+                    if not "frame_count" in x:
+                        set_task_status(task_name, "patch",-3,"no frame count",mydb)
+                        continue
+                    img_count=x["frame_count"]
+                    [re,imgid_2_posi_seg] = get_frame_2_posi_seg(img_count, tmp_local)
+                    [re,info] = download_patches_oss(task_name, bucket, tmp_local)
+                    if re==False:
+                        set_task_status(task_name, "patch",-4,info,mydb)
+                        continue
+                    for key in imgid_2_posi_seg:
+                        box = get_bounding_box(imgid_2_posi_seg[key])# left, right, bottom, top
+                        [re,info]=download_img_path(imgid_2_posi_seg[key])
+                        if re==False:
+                            set_task_status(task_name, "patch",-8,info,mydb)
+                            continue
+                        [re,info]=download_whole_map(box[0], box[1], box[2], box[3], key,imgid_2_posi_seg[key])
+                        if re==False:
+                            set_task_status(task_name, "patch",-6,info,mydb)
+                            continue
+                upload_patch_to_oss(task_name, bucket, tmp_local)
                 [re,info] = download_patches_oss(task_name, bucket, tmp_local)
                 if re==False:
-                    set_task_status(task_name, "patch",-4,info,mydb)
+                    set_task_status(task_name, "patch",-8,info,mydb)
                     continue
-                for key in imgid_2_posi_seg:
-                    box = get_bounding_box(imgid_2_posi_seg[key])# left, right, bottom, top
-                    [re,info]=download_img_path(imgid_2_posi_seg[key])
-                    if re==False:
-                        set_task_status(task_name, "patch",-8,info,mydb)
-                        continue
-                    [re,info]=download_whole_map(box[0], box[1], box[2], box[3], key,imgid_2_posi_seg[key])
-                    if re==False:
-                        set_task_status(task_name, "patch",-6,info,mydb)
-                        continue
-            upload_patch_to_oss(task_name, bucket, tmp_local)
-            [re,info] = download_patches_oss(task_name, bucket, tmp_local)
-            if re==False:
-                set_task_status(task_name, "patch",-8,info,mydb)
-                continue
-            set_task_status(task_name, "patch",2,"",mydb)
+                set_task_status(task_name, "patch",2,"",mydb)
+            except Exception as e:
+                set_task_status(task_name, "patch",-999, "crash",mydb)
+                var = traceback.format_exc()
+                obj={"traj":task_name,"stack":var}
+                now = datetime.datetime.now()
+                date_created=now.strftime('%Y-%m-%d_%H-%M-%S')
+                path = oss_root+"/err/"+date_created+"_proc_"+task_name+".txt"
+                write_json_to_oss(obj,path,"patch",bucket)
         time.sleep(10)
 
     

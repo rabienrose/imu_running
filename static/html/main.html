@@ -8,7 +8,14 @@
     <link rel="stylesheet" href="../css/main.css">
 </head>
 <body>
+    <button type="button" onclick="get_proj_list()" class="large_button">刷新</button>
     <div id="proj_list"></div>
+    <strong>Project</strong><input type="text" id="traj_input" value="" class="large_input"></input>
+    <strong>Task</strong><input type="text" id="task_input" value="" class="small_input"></input>
+    <strong>Status</strong><input type="text" id="status_input" value="" class="small_input"></input>
+    <strong>EditMode</strong><input type="text" id="edit_mode_input" value="" class="small_input"></input>
+    <strong>Owner</strong><input type="text" id="owner_input" value="" class="small_input"></input>
+    <button type="button" onclick="modify_status()" class="large_button">修改状态</button>
 </body>
 </html>
 
