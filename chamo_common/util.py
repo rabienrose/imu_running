@@ -338,6 +338,18 @@ def get_video_frame_count(tmp_local):
     else:
         duration = -1
     return duration 
+    
+def download_res_oss(bucket):
+    oss_prefix=oss_root+"/res"
+    if not os.path.exists("res"):
+        os.mkdir("res")
+    for obj in oss2.ObjectIterator(bucket, prefix=oss_prefix+"/"):
+        vec=obj.key.split("/")
+        if len(vec)!=3:
+            continue
+        filename=vec[2]
+        if not os.path.exists("res/"+filename):
+            bucket.get_object_to_file(obj.key, "res/"+filename)
 
 def cal_whole_tiles(min_x, max_x, min_y, max_y):
     target_zoom = -1

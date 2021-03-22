@@ -12,7 +12,7 @@ task_table_name="task"
 oss_root="phone_sport"
 patch_path="patches"
 
-use_internal=False
+use_internal=True
 if use_internal:
     url="mongodb://root:La_009296@dds-2ze0c5fb5b9bf554118470.mongodb.rds.aliyuncs.com:3717/admin"
     endpoint = os.getenv('OSS_TEST_ENDPOINT', 'https://oss-cn-beijing-internal.aliyuncs.com') # internal net

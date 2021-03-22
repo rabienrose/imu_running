@@ -18,6 +18,7 @@ from chamo_common.util import cal_whole_tiles
 from chamo_common.util import upload_out_to_oss
 from chamo_common.util import get_sec
 from chamo_common.util import write_json_to_oss
+from chamo_common.util import download_res_oss
 from chamo_common.config import get_oss_mongo
 import oss2
 import datetime
@@ -93,18 +94,6 @@ def get_map_crop_img(center, s, whole_map,image_ori):
     up=center[1]-s-image_ori[1]
     below=center[1]+s-image_ori[1]
     return whole_map.crop((left, up, right, below))
-
-def download_res_oss(bucket):
-    oss_prefix=oss_root+"/res"
-    if not os.path.exists("res"):
-        os.mkdir("res")
-    for obj in oss2.ObjectIterator(bucket, prefix=oss_prefix+"/"):
-        vec=obj.key.split("/")
-        if len(vec)!=3:
-            continue
-        filename=vec[2]
-        if not os.path.exists("res/"+filename):
-            bucket.get_object_to_file(obj.key, "res/"+filename)
 
 def gen_video_imgs(imgid_2_posi, txt_list, box):
     image_ori=[0,0]
