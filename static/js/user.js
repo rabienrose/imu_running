@@ -63,7 +63,7 @@ function get_account_info(){
                     garage_count=data["user_tasks"].length
                     g_list=data["user_tasks"]
                     html_table="<table border=1>"
-                    html_table=html_table+"<tr><th>任务名</th><th>kml</th><th></th><th>开始时间</th><th>状态</th></tr>"
+                    html_table=html_table+"<tr><th>任务名</th><th>kml</th><th>视频</th><th></th><th>开始时间</th><th>状态</th></tr>"
                     for(var i=0; i<garage_count; i++){
                         html_table=html_table+'<tr>'
                         html_table=html_table+'<td>'+g_list[i]["name"]+'</td>'
@@ -72,6 +72,7 @@ function get_account_info(){
                         }else{
                             html_table=html_table+'<td></td>'
                         }
+                        html_table=html_table+'<td>'+'<a href="'+oss_path+g_list[i]["name"]+"/chamo.mp4"+'">下载</a>'+'</td>'
                         if (g_list[i]["edit_mode"]=="pending" || g_list[i]["edit_mode"]=="done"){
                             html_table=html_table+'<td></td>'
                         }else{

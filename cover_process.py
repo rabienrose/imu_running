@@ -44,11 +44,11 @@ if __name__ == '__main__':
     bucket, mydb = get_oss_mongo()
     download_res_oss(bucket)    
     while True:
-        tasks=get_task_list("chamo", mydb)
+        tasks=get_task_list("cover_s", mydb)
         for task_name in tasks:
             try:
                 print(task_name+" start")
-                set_task_status(task_name, "cover_s",1,"", mydb)
+                set_task_status(task_name, "cover",1,"", mydb)
                 if os.path.exists(tmp_local):
                     shutil.rmtree(tmp_local)
                 os.mkdir(tmp_local)
@@ -140,7 +140,7 @@ if __name__ == '__main__':
                         l=text_bg_center[0]-7
                         for i in range(t2_count):
                             draw.text((l, t+15*i), item["video_title1"][i], font=fnt1, fill=(255,255,255,255))
-                        cover_img_name=task_name+"_patch_"+item["video_ind"]+".png"
+                        cover_img_name=task_name+"_path_"+item["video_ind"]+".png"
                         cover_img.save(tmp_local+"/"+cover_img_name)
                         oss_path=oss_root+"/cover/"+cover_img_name
                         bucket.put_object_from_file(oss_path, tmp_local+"/"+cover_img_name)

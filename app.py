@@ -108,6 +108,12 @@ def get_proj_list():
             info["name"]=proj_name
             if not bucket.object_exists(obj.key+"chamo.mp4"):
                 continue
+            info["task"]=""
+            info["status"]=""
+            info["edit_time"]=""
+            info["owner"]=""
+            info["edit_mode"]=""
+            info["info"]=""
             for x in mydb[task_table_name].find({"name":proj_name},{"_id":0,"task":1, "status":1, "info":1, "owner":1, "edit_time":1,"edit_mode":1}):
                 info["task"]=x["task"]
                 info["status"]=x["status"]
