@@ -135,12 +135,10 @@ def gen_video_imgs(imgid_2_posi, txt_list, box):
     frame_border = Image.open(frame_name)
     width_b, height_b = frame_border.size
     me_marker = Image.open("res/me.png")
+    cul_path_img_count=0
     
     img_cont=0
     last_dir=[0,0]
-    last_angle=0
-    last_change_frame=0
-    last_mode="world"
     fnt = ImageFont.truetype("res/Montserrat-ExtraLight.otf", 20)
     fnt1 = ImageFont.truetype("res/text.ttf", 36)
     fnt2 = ImageFont.truetype("res/text.ttf", 15)
@@ -164,32 +162,15 @@ def gen_video_imgs(imgid_2_posi, txt_list, box):
             im = im.crop((0, top, 1138, height-top))
         cropped = get_map_crop_img(imgid_2_posi[i]["p"], 256, map_whole, image_ori)
         angle=0
-        angle_avg=200
-        
-        if i+angle_avg<len(imgid_2_posi):
-            cur_dir =[imgid_2_posi[i+angle_avg]["p"][0]-imgid_2_posi[i]["p"][0], imgid_2_posi[i+angle_avg]["p"][1]-imgid_2_posi[i]["p"][1]]
-            dir=[0.05*cur_dir[0]+0.95*last_dir[0], 0.05*cur_dir[1]+0.95*last_dir[1]]
-            angle_rad = math.atan2(dir[1], dir[0])
-            last_dir=dir
-            angle=angle_rad*180/3.1415926
-        else:
-            angle = last_angle
-        angle_diff=abs(angle-last_angle)
-        if angle_diff>10:
-            angle_diff=0
-        change_time_thresh=500
+        cur_dir =imgid_2_posi[i]["dir"]
+        dir=[0.01*cur_dir[0]+0.99*last_dir[0], 0.01*cur_dir[1]+0.99*last_dir[1]]
+        angle_rad = math.atan2(dir[1], dir[0])
+        last_dir=dir
+        angle=angle_rad*180/3.1415926
         sub_img_type=""
-        if abs(angle-last_angle)<0.1 and (img_cont-last_change_frame>change_time_thresh and last_mode=="world" or last_mode=="local") or abs(angle-last_angle)>=0.1 and img_cont-last_change_frame<change_time_thresh and last_mode=="local":
-            sub_img_type="bv"
-            cropped=cropped.rotate(angle+90)
-            cropped=cropped.crop((124, 168, 388, 344))
-            # cropped.putalpha(200)
-            width, height = im.size
-            im.paste(cropped, (44, height-195-24))
-            if last_mode=="world":
-                last_change_frame=img_cont
-                last_mode="local"
-        else:
+        if i%1500==0:
+            cul_path_img_count=100
+        if cul_path_img_count>0:
             sub_img_type="path"
             s_map_whole_t = s_map_whole.copy() 
             pts_b=[]
@@ -211,9 +192,14 @@ def gen_video_imgs(imgid_2_posi, txt_list, box):
             # draw.ellipse((cur_posi[0]-5, cur_posi[1]-5, cur_posi[0]+5, cur_posi[1]+5), fill = 'blue', outline ='blue')            
             s_map_whole_t=s_map_whole_t.crop((box_center[0]-132, box_center[1]-87, box_center[0]+132, box_center[1]+88))
             im.paste(s_map_whole_t, (44, height-195-24))
-            if last_mode=="local":
-                last_change_frame=img_cont
-                last_mode="world"
+            cul_path_img_count=cul_path_img_count-1
+        else:
+            sub_img_type="bv"
+            cropped=cropped.rotate(angle+90)
+            cropped=cropped.crop((124, 168, 388, 344))
+            # cropped.putalpha(200)
+            width, height = im.size
+            im.paste(cropped, (44, height-195-24))
         
         im.paste(frame_border, (34, height-24-height_b), mask=frame_border)
         draw = ImageDraw.Draw(im)
@@ -232,7 +218,6 @@ def gen_video_imgs(imgid_2_posi, txt_list, box):
             draw.text((int(176-3*15/2),598), "鸟瞰图", font=fnt2, fill=(255,255,255,255))
         elif sub_img_type=="path":
             draw.text((int(176-3*15/2),598), "路线图", font=fnt2, fill=(255,255,255,255))
-        last_angle=angle
         img_filename=str(1000000+img_cont)[1:7]+".jpg"
         im.save(out_video_imgs_folder+"/"+img_filename)
         img_cont=img_cont+1
@@ -285,30 +270,32 @@ if __name__ == '__main__':
             try:
                 print(task_name+" start")
                 set_task_status(task_name, "proc",1,"", mydb)
-                if os.path.exists(tmp_local):
-                    shutil.rmtree(tmp_local)
-                os.mkdir(tmp_local)
-                download_txt_oss(task_name)
-                [re,txt_list]=read_txt()
-                if re==False:
-                    set_task_status(task_name, "proc",-13,txt_list,mydb)
-                    continue
-                [re,info]=download_kml_oss(task_name, bucket, tmp_local)
-                if re==False:
-                    set_task_status(task_name, "proc",-2,info,mydb)
-                    continue
-                [re,info]=download_raw_video_oss(task_name, bucket, tmp_local)
-                if re==False:
-                    set_task_status(task_name, "proc",-3,info,mydb)
-                    continue
-                [re,info]=download_patches_oss(task_name, bucket, tmp_local)
-                if re==False:
-                    set_task_status(task_name, "proc",-6,info,mydb)
-                    continue
-                [re,info]=extract_video()
-                if re==False:
-                    set_task_status(task_name, "proc",-7,info,mydb)
-                    continue
+                txt_list=[]
+
+                # if os.path.exists(tmp_local):
+                #     shutil.rmtree(tmp_local)
+                # os.mkdir(tmp_local)
+                # download_txt_oss(task_name)
+                # [re,txt_list]=read_txt()
+                # if re==False:
+                #     set_task_status(task_name, "proc",-13,txt_list,mydb)
+                #     continue
+                # [re,info]=download_kml_oss(task_name, bucket, tmp_local)
+                # if re==False:
+                #     set_task_status(task_name, "proc",-2,info,mydb)
+                #     continue
+                # [re,info]=download_raw_video_oss(task_name, bucket, tmp_local)
+                # if re==False:
+                #     set_task_status(task_name, "proc",-3,info,mydb)
+                #     continue
+                # [re,info]=download_patches_oss(task_name, bucket, tmp_local)
+                # if re==False:
+                #     set_task_status(task_name, "proc",-6,info,mydb)
+                #     continue
+                # [re,info]=extract_video()
+                # if re==False:
+                #     set_task_status(task_name, "proc",-7,info,mydb)
+                #     continue
 
                 re = list(mydb[task_table_name].find({"name":task_name},{"_id":0,"frame_count":1}))
                 if len(re)==0:
@@ -350,10 +337,12 @@ if __name__ == '__main__':
                         break
                 if b_succ==False:
                     continue
-                [re,info]=upload_out_to_oss(task_name, bucket, tmp_local)
-                if re==False:
-                    set_task_status(task_name, "patch",-12,info,mydb)
-                    continue
+
+                # [re,info]=upload_out_to_oss(task_name, bucket, tmp_local)
+                # if re==False:
+                #     set_task_status(task_name, "patch",-12,info,mydb)
+                #     continue
+
                 set_task_status(task_name, "proc",2, "" ,mydb)
             except Exception as e:
                 set_task_status(task_name, "proc",-999, "crash",mydb)

@@ -7,7 +7,7 @@ task_table_name=chamo_common.config.task_table_name
 bucket, mydb = get_oss_mongo()
 task_table=mydb[task_table_name]
 
-# task_table.insert_one({"task":"init", "status":2, "name":"swiss_bern"})
-task_table.update_one({"name":"colorado_ski"},{"$set":{"edit_mode":"edit"}})
+# task_table.delete_one({"name":"chamo"})
+task_table.update_many({"status":{"$exists":False}},{"$set":{"status":2,"task":""}})
 for x in task_table.find({}):
     print(x)

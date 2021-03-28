@@ -162,19 +162,19 @@ def modify_status():
 @app.route('/choose_task', methods=['GET'])
 @auth.login_required
 def choose_task():
-    task = request.values.get('task')
+    proj = request.values.get('proj')
     account=auth.username()
     t = time.localtime()
     current_time = time.strftime("%y%m%d", t)
     int_data=int(current_time)
-    print({"edit_mode":"edit","owner":account,"edit_time":int_data})
-    mydb[task_table_name].update_one({"name":task},{"$set":{"edit_mode":"edit","owner":account,"edit_time":int_data}})
+    print({"proj":proj,"edit_mode":"edit","owner":account,"edit_time":int_data})
+    mydb[task_table_name].update_one({"name":proj},{"$set":{"edit_mode":"edit","owner":account,"edit_time":int_data,"task":"","status":2}},True)
     return json.dumps(["ok"])
 
 @app.route('/send_kml', methods=['POST'])
 @auth.login_required
 def send_kml():
-    task = request.form['task']
+    proj = request.form['proj']
     str_kml = request.form['str_kml']
     f = open("chamo.kml","w")
     f.write(str_kml)
@@ -182,8 +182,8 @@ def send_kml():
     [re,info] = verify_kml(".")
     if re==False:
         return json.dumps([info])
-    mydb[task_table_name].update_one({"name":task},{"$set":{"edit_mode":"pending"}})
-    oss_path=oss_root+"/ws/"+task+"/chamo.kml"
+    mydb[task_table_name].update_one({"name":proj},{"$set":{"edit_mode":"pending"}})
+    oss_path=oss_root+"/ws/"+proj+"/chamo.kml"
     bucket.put_object_from_file(oss_path, "chamo.kml")
     return json.dumps(["ok"])
 

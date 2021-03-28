@@ -117,8 +117,8 @@ def verify_kml(tmp_local):
                     return [False,"时间非递增，t1="+str(last_s_time)+" t2="+str(s_time)]
                 last_s_time=s_time
     except:
-        var = traceback.format_exc()
-        return [False,"出错： "+var]
+        # var = traceback.format_exc()
+        return [False,"出错： "+name]
     return [True,"ok"]
 
 def get_img_2_posi_list(img_count, tmp_local):
@@ -136,6 +136,7 @@ def get_img_2_posi_list(img_count, tmp_local):
     last_posi=[]
     last_s_time=0
     path_meta=[]
+    path_dir=[]
     for mk in place_markers:
         coor_str = mk.find(ns+"Point").find(ns+"coordinates").text
         v_str=coor_str.split(",")
@@ -148,13 +149,23 @@ def get_img_2_posi_list(img_count, tmp_local):
             name=vec[0]
             param=vec[1]
         if len(last_posi)==0:
-            last_posi=cur_posi
+            pass
         else:
             dist = get_2d_dist(cur_posi, last_posi)
             cur_s=cur_s+dist
             s_path.append(cur_s)
+            dir=[cur_posi[0]-last_posi[0], cur_posi[1]-last_posi[1]]
+            dir_n=math.sqrt(dir[0]*dir[0]+dir[1]*dir[1])
+            if dir_n<5:
+                if len(path_dir)==0:
+                    return [False,"len(path_dir)==0 "]
+                path_dir.append(path_dir[len(path_dir)-1])
+            else:
+                dir=[dir[0]/dir_n, dir[1]/dir_n]
+                path_dir.append(dir)
         path_posi.append(cur_posi)
         path_meta.append(param)
+        last_posi=cur_posi
         if ":" in name:
             two_v = name.split("-")
             if len(two_v)==1:
@@ -167,7 +178,7 @@ def get_img_2_posi_list(img_count, tmp_local):
                 return [False,"last_s_time>=s_time "+str(last_s_time)+" "+str(s_time)]
             last_s_time=s_time
             node_2_path.append([len(path_posi)-1, s_time, e_time])    
-    
+    path_dir.append(path_dir[len(path_dir)-1])
     seg_time_list=[]
     seg_pathid_list=[]
     for i in range(1, len(node_2_path)):
@@ -190,7 +201,7 @@ def get_img_2_posi_list(img_count, tmp_local):
             s2=s_path[j+1]
             t1 = (s1-seg_s_s)/seg_s*seg_t+seg_t_s
             t2 = (s2-seg_s_s)/seg_s*seg_t+seg_t_s
-            seg={"time":[t1, t2],"posi":[path_posi[j],path_posi[j+1]],"meta":path_meta[j]}
+            seg={"time":[t1, t2],"posi":[path_posi[j],path_posi[j+1]],"meta":path_meta[j],"dir":path_dir[j]}
             path_seg_list.append(seg)
         if path_meta[seg_pathid_list[i][1]]=="end":
             end_nodes.add(len(path_seg_list)-1)
@@ -200,7 +211,7 @@ def get_img_2_posi_list(img_count, tmp_local):
         cur_time=i/float(target_fps)
         posi,n = get_img_posi(cur_time, path_seg_list)
         if posi is not None:
-            imgid_2_posi.append({"t":i, "p":posi,"meta":path_seg_list[n]["meta"]})
+            imgid_2_posi.append({"t":i, "p":posi,"meta":path_seg_list[n]["meta"],"dir":path_seg_list[n]["dir"]})
             last_n=n
         else:
             if n==-2:
@@ -217,11 +228,13 @@ def get_frame_2_posi_seg(img_count, tmp_local):
     tmp_count=0
     v_seg_id=0
     imgid_2_posi_seg={}
+    cul_count=0
     for item in imgid_2_posi:
         if v_seg_id not in imgid_2_posi_seg:
             imgid_2_posi_seg[v_seg_id]=[]
         imgid_2_posi_seg[v_seg_id].append(item)
-        if tmp_count<v_seg_frame_count or len(imgid_2_posi)-tmp_count<2*v_seg_frame_count:
+        
+        if tmp_count<v_seg_frame_count or len(imgid_2_posi)-cul_count<int(v_seg_frame_count/2):
             pass
         else:
             tmp_count=0
@@ -230,6 +243,7 @@ def get_frame_2_posi_seg(img_count, tmp_local):
             tmp_count=0
             v_seg_id=v_seg_id+1
         tmp_count=tmp_count+1
+        cul_count=cul_count+1
     return [True, imgid_2_posi_seg]
 
 def get_task_list(task, mydb):
@@ -285,7 +299,7 @@ def download_patches_oss(project_name, bucket, tmp_local):
                     os.mkdir(patch_z_path)
                 bucket.get_object_to_file(obj.key, patch_z_path+"/"+patch_name)
     except:
-        return [False, "download patches failed"]
+        return [False, traceback.format_exc()]
     return [True,""]
 
 def upload_patch_to_oss(project_name, bucket, tmp_local):
@@ -355,7 +369,7 @@ def cal_whole_tiles(min_x, max_x, min_y, max_y):
     target_zoom = -1
     target_tiles_x = []
     target_tiles_y=[]
-    for tmp_zoom in range(15,9,-1):
+    for tmp_zoom in range(15,6,-1):
         z_diff=path_img_zoom-tmp_zoom
         wc_lt=[min_x>> z_diff, min_y>> z_diff]
         wc_rb=[max_x>> z_diff, max_y>> z_diff]
@@ -368,7 +382,8 @@ def cal_whole_tiles(min_x, max_x, min_y, max_y):
         else:
             base_len=wc_rb[1]-wc_lt[1]
             max_p=175
-        if base_len<max_p-10:
+        # print(base_len, tmp_zoom, min_x, max_x, min_y, max_y)
+        if base_len<max_p-5:
             target_tiles_x=[wc_tile[0]-1,wc_tile[0],wc_tile[0]+1]
             target_tiles_y=[wc_tile[1]-1,wc_tile[1],wc_tile[1]+1]
             target_zoom=tmp_zoom

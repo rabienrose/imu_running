@@ -26,11 +26,13 @@ function set_local_password(account_, password_){
 
 function upload_kml(task_name){
     cache_task_name=task_name
+    console.log(cache_task_name)
     document.getElementById('load_kml').click()
 }
 
 function callback_upload_kml(){
     for (var file_id=0; file_id<this.files.length; file_id++){
+        console.log(this.files[file_id])
         var file=this.files[file_id]
         var file_name=file["name"]
         if (!file_name.includes(".kml")){
@@ -127,11 +129,12 @@ function login_regist(){
     });
 }
 
-function send_kml(task, str_kml){
+function send_kml(proj, str_kml){
+    console.log(proj)
     $.ajax({
         type: 'POST',
         url: '../../send_kml',
-        data: { task: task, str_kml:str_kml},
+        data: { proj: proj, str_kml:str_kml},
         username: account, 
         password: password,
         dataType: 'json',
@@ -145,11 +148,11 @@ function send_kml(task, str_kml){
     });
 }
 
-function choose_task(task, user){
+function choose_task(proj){
     $.ajax({
         type: 'GET',
         url: '../../choose_task',
-        data: { task: task},
+        data: { proj: proj},
         username: account, 
         password: password,
         dataType: 'json',
@@ -165,6 +168,7 @@ function choose_task(task, user){
 }
 
 function get_proj_list(){
+    
     $.ajax({
         type: 'GET',
         url: '../../get_proj_list',
@@ -179,7 +183,7 @@ function get_proj_list(){
                     var str_row="<tr>"
                     str_row=str_row+"<td>"+data[i]["name"]+"</td>"
                     str_row=str_row+"<td>"+'<a href="'+oss_path+data[i]["name"]+"/chamo.mp4"+'">视频</a>'+"</td>"
-                    str_row=str_row+"<td>"+'<a href="#" onclick=choose_task("'+data[i]["name"]+'","'+account+'")>选择</a>'+"</td>"
+                    str_row=str_row+"<td>"+'<a href="#" onclick=choose_task("'+data[i]["name"]+'")>选择</a>'+"</td>"
                     str_row=str_row+"</tr>"
                     str=str+str_row
                 }
